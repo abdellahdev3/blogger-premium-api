@@ -18,7 +18,7 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// نقطة نهاية لتسجيل الدخول والتحقق من الجلسات
+// نقطة نهاية لتسجيل الدخول وإنشاء الجلسات
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -30,13 +30,11 @@ app.post('/login', async (req, res) => {
     const user = data.user;
     const sessionToken = crypto.randomUUID();
 
-    // حذف الجلسات القديمة للمستخدم
     await supabase
         .from('user_sessions')
         .delete()
         .eq('user_id', user.id);
 
-    // إنشاء جلسة جديدة
     await supabase
         .from('user_sessions')
         .insert({ user_id: user.id, session_token: sessionToken });
@@ -73,7 +71,6 @@ app.get('/download-file', async (req, res) => {
         return res.status(401).send('Unauthorized: Missing credentials');
     }
 
-    // تحقق من صلاحية الجلسة
     const { data: sessionData } = await supabase
         .from('user_sessions')
         .select('user_id')
@@ -84,7 +81,6 @@ app.get('/download-file', async (req, res) => {
         return res.status(401).send('Unauthorized: Invalid session');
     }
 
-    // تحقق من أن المستخدم مميز
     const { data: premiumStatus } = await supabase
         .from('premium_users_view')
         .select('premium_access')
@@ -104,13 +100,9 @@ app.get('/download-file', async (req, res) => {
     }
 });
 
-// -- -- -- -- -- -- -- -- -- -- -- -- -- --
-// نقاط النهاية الجديدة للملف الشخصي
-// -- -- -- -- -- -- -- -- -- -- -- -- -- --
-
 // نقطة نهاية لجلب بيانات المستخدم
 app.get('/get-profile', async (req, res) => {
-    const userId = req.headers['user_id'];
+    const { user_id: userId } = req.query;
     if (!userId) {
         return res.status(400).send('User ID is required');
     }
