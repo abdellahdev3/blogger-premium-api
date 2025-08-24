@@ -92,7 +92,6 @@ app.get('/download-file', async (req, res) => {
         .single();
 
     if (premiumStatus && premiumStatus.premium_access) {
-        // إذا كان المستخدم مميزًا، أرسل الملف
         const filePath = path.join(__dirname, 'files', 'your-file.zip');
         res.download(filePath, (err) => {
             if (err) {
@@ -103,6 +102,47 @@ app.get('/download-file', async (req, res) => {
     } else {
         res.status(403).send('Access Denied: Not a premium user');
     }
+});
+
+// -- -- -- -- -- -- -- -- -- -- -- -- -- --
+// نقاط النهاية الجديدة للملف الشخصي
+// -- -- -- -- -- -- -- -- -- -- -- -- -- --
+
+// نقطة نهاية لجلب بيانات المستخدم
+app.get('/get-profile', async (req, res) => {
+    const userId = req.headers['user_id'];
+    if (!userId) {
+        return res.status(400).send('User ID is required');
+    }
+    const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('first_name, last_name, avatar_id, subscription_start, subscription_end, premium_access')
+        .eq('user_id', userId)
+        .single();
+    if (profileError) {
+        return res.status(500).json({ error: 'Error fetching user profile' });
+    }
+    return res.json(profile);
+});
+
+// نقطة نهاية لتحديث بيانات المستخدم
+app.post('/update-profile', async (req, res) => {
+    const { userId, firstName, lastName, avatarId } = req.body;
+    if (!userId) {
+        return res.status(400).send('User ID is required');
+    }
+    const { data, error } = await supabase
+        .from('user_profiles')
+        .update({
+            first_name: firstName,
+            last_name: lastName,
+            avatar_id: avatarId
+        })
+        .eq('user_id', userId);
+    if (error) {
+        return res.status(500).json({ error: 'Error updating profile' });
+    }
+    return res.json({ message: 'Profile updated successfully' });
 });
 
 app.listen(port, () => {
