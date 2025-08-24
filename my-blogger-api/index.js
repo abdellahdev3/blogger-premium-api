@@ -26,17 +26,15 @@ app.post('/login', async (req, res) => {
     if (error) {
         return res.status(401).json({ error: error.message });
     }
-
+    
     const user = data.user;
     const sessionToken = crypto.randomUUID();
 
-    // حذف الجلسات القديمة للمستخدم
     await supabase
         .from('user_sessions')
         .delete()
         .eq('user_id', user.id);
 
-    // إنشاء جلسة جديدة
     await supabase
         .from('user_sessions')
         .insert({ user_id: user.id, session_token: sessionToken });
