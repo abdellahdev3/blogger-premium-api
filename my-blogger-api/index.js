@@ -26,7 +26,7 @@ app.post('/login', async (req, res) => {
     if (error) {
         return res.status(401).json({ error: error.message });
     }
-    
+
     const user = data.user;
     const sessionToken = crypto.randomUUID();
 
@@ -46,7 +46,7 @@ app.post('/login', async (req, res) => {
 
 // نقطة نهاية لجلب بيانات المستخدم
 app.get('/get-profile', async (req, res) => {
-    const userId = req.headers['user_id'];
+    const { user_id: userId } = req.query;
     if (!userId) {
         return res.status(400).send('User ID is required');
     }
