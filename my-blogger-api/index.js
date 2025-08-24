@@ -107,7 +107,7 @@ app.get('/get-profile', async (req, res) => {
         return res.status(400).send('User ID is required');
     }
     const { data: profile, error: profileError } = await supabase
-        .from('"Premium Users"') // هنا تم تصحيح اسم الجدول
+        .from('"Premium Users"')
         .select('first_name, last_name, avatar_id, subscription_start, subscription_end, premium_access')
         .eq('user_id', userId)
         .single();
@@ -124,7 +124,7 @@ app.post('/update-profile', async (req, res) => {
         return res.status(400).send('User ID is required');
     }
     const { data, error } = await supabase
-        .from('"Premium Users"') // هنا تم تصحيح اسم الجدول
+        .from('"Premium Users"')
         .update({
             first_name: firstName,
             last_name: lastName,
