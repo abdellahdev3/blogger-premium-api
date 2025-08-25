@@ -26,7 +26,7 @@ app.post('/login', async (req, res) => {
     if (error) {
         return res.status(401).json({ error: error.message });
     }
-
+    
     const user = data.user;
     const sessionToken = crypto.randomUUID();
 
@@ -42,64 +42,6 @@ app.post('/login', async (req, res) => {
     return res.json({ message: 'Login successful', sessionToken, user_id: user.id });
 });
 
-// نقطة نهاية للتحقق من حالة الاشتراك
-app.post('/check-premium', async (req, res) => {
-    const { userId } = req.body;
-
-    if (!userId) {
-        return res.status(400).json({ error: 'User ID is required' });
-    }
-
-    const { data, error } = await supabase
-        .from('premium_users_view')
-        .select('premium_access')
-        .eq('user_id', userId)
-        .single();
-
-    if (error) {
-        return res.status(500).json({ error: 'Error checking premium status' });
-    }
-
-    return res.json({ isPremium: data ? data.premium_access : false });
-});
-
-// نقطة نهاية لتحميل الملفات بشكل آمن
-app.get('/download-file', async (req, res) => {
-    const { user_id: userId, session_token: sessionToken } = req.query;
-
-    if (!userId || !sessionToken) {
-        return res.status(401).send('Unauthorized: Missing credentials');
-    }
-
-    const { data: sessionData } = await supabase
-        .from('user_sessions')
-        .select('user_id')
-        .eq('session_token', sessionToken)
-        .single();
-
-    if (!sessionData || sessionData.user_id !== userId) {
-        return res.status(401).send('Unauthorized: Invalid session');
-    }
-
-    const { data: premiumStatus } = await supabase
-        .from('premium_users_view')
-        .select('premium_access')
-        .eq('user_id', userId)
-        .single();
-
-    if (premiumStatus && premiumStatus.premium_access) {
-        const filePath = path.join(__dirname, 'files', 'your-file.zip');
-        res.download(filePath, (err) => {
-            if (err) {
-                console.error('Error sending file:', err);
-                res.status(500).send('Could not download the file.');
-            }
-        });
-    } else {
-        res.status(403).send('Access Denied: Not a premium user');
-    }
-});
-
 // نقطة نهاية لجلب بيانات المستخدم
 app.get('/get-profile', async (req, res) => {
     const { user_id: userId } = req.query;
@@ -107,14 +49,18 @@ app.get('/get-profile', async (req, res) => {
         return res.status(400).send('User ID is required');
     }
     const { data: profile, error: profileError } = await supabase
-        .from('"Premium Users"')
-        .select('first_name, last_name, avatar_id, subscription_start, subscription_end, premium_access')
+        .from('user_profiles')
+        .select('first_name, last_name, avatar_id, subscription_start, subscription_end')
         .eq('user_id', userId)
         .single();
     if (profileError) {
         return res.status(500).json({ error: 'Error fetching user profile' });
     }
-    return res.json(profile);
+    
+    // بناء رابط الصورة الرمزية هنا
+    const avatarUrl = `https://vuxkgcdtardgcrgmpjeh.supabase.co/storage/v1/object/public/avatars/avatar${profile.avatar_id}.png`;
+
+    return res.json({ ...profile, avatar_url: avatarUrl });
 });
 
 // نقطة نهاية لتحديث بيانات المستخدم
@@ -124,7 +70,7 @@ app.post('/update-profile', async (req, res) => {
         return res.status(400).send('User ID is required');
     }
     const { data, error } = await supabase
-        .from('"Premium Users"')
+        .from('user_profiles')
         .update({
             first_name: firstName,
             last_name: lastName,
